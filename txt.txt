@@ -11,3 +11,201 @@ Jenkins.
 
 e. Prime number.
 
+
+
+
+
+
+
+
+
+
+
+
+0. Architecture (What you’re building)
+Developer → GitHub → Jenkins → Maven Build → Docker → Docker Hub → Kubernetes → Live App
+🔹 1. Create Java Maven Application
+
+vs terminal- 
+mvn archetype:generate -DgroupId=com.example -DartifactId=java-app -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
+cd java-app
+🔹 Modify App.java
+package com.example;
+
+public class App {
+    public static void main(String[] args) {
+        System.out.println("Hello from CI/CD Java App 🚀");
+    }
+}
+🔹 2. Build using Maven
+mvn clean package
+
+👉 Output:
+
+target/java-app-1.0-SNAPSHOT.jar
+🔹 3. Create Dockerfile
+
+📍 Inside project root
+
+FROM openjdk:17
+WORKDIR /app
+COPY target/java-app-1.0-SNAPSHOT.jar app.jar
+CMD ["java", "-jar", "app.jar"]
+🔹 4. Push to GitHub
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/yourusername/java-app.git
+git push -u origin main
+🔹 5. Build & Push Docker Image
+docker build -t yourusername/java-app .
+docker push yourusername/java-app
+
+👉 Make it public
+
+🔹 6. Kubernetes Deployment
+deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: java-app
+  template:
+    metadata:
+      labels:
+        app: java-app
+    spec:
+      containers:
+        - name: java-app
+          image: yourusername/java-app:latest
+          ports:
+            - containerPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: java-app-service
+spec:
+  type: NodePort
+  selector:
+    app: java-app
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30020
+🔹 7. Setup Jenkins
+
+Run Jenkins:
+
+docker run -p 8081:8080 jenkins/jenkins:lts
+
+Open:
+
+http://localhost:8081
+🔹 8. Configure Jenkins
+Install tools:
+JDK 17
+Maven
+Git
+Add credentials:
+Docker Hub → dockerhub
+Kubernetes config → kuberconfig
+🔹 9. Create Jenkins Pipeline
+✅ Jenkinsfile
+pipeline {
+    agent any
+
+    tools {
+        maven 'Maven'
+        jdk 'JDK17'
+    }
+
+    environment {
+        DOCKER_IMAGE = "yourusername/java-app"
+    }
+
+    stages {
+
+        stage('Clone Code') {
+            steps {
+                git branch: 'main',
+                url: 'https://github.com/yourusername/java-app.git'
+            }
+        }
+
+        stage('Build with Maven') {
+            steps {
+                bat 'mvn clean package'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                bat 'docker build -t %DOCKER_IMAGE% .'
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub',
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS')]) {
+
+                    bat 'docker login -u %USER% -p %PASS%'
+                    bat 'docker push %DOCKER_IMAGE%'
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([file(
+                    credentialsId: 'kuberconfig',
+                    variable: 'KUBECONFIG')]) {
+
+                    bat '''
+                    set KUBECONFIG=%KUBECONFIG%
+                    kubectl apply -f deployment.yaml
+                    '''
+                }
+            }
+        }
+    }
+}
+🔹 10. Run Pipeline
+
+👉 Jenkins → Build Now
+
+🔹 11. Enable Auto CI/CD (Webhook)
+
+In GitHub:
+
+Settings → Webhooks
+Add:
+http://<jenkins-url>/github-webhook/
+🔹 12. Verify Deployment
+kubectl get pods
+kubectl get services
+
+Access:
+
+http://localhost:30020
+🔥 Important Real-World Notes
+🔹 Why Maven?
+Handles dependencies
+Builds .jar file
+🔹 Why Docker?
+Packages Java app with runtime
+🔹 Why Kubernetes?
+Runs multiple replicas
+Auto-scaling, high availability
+🔹 Why Jenkins?
+Automates everything
+🔹 Final Flow (Interview Ready)
+Code Push → Jenkins Trigger → Maven Build → Docker Image → Push → Kubernetes Deploy → Live App
