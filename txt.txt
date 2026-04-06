@@ -1,0 +1,13 @@
+1. Simple Java Console App (Baseline
+CI/CD)
+TASK : Create Maven project with Junit tests
+ Create a Maven based application by following standard Maven directory structure.
+ Write the code in Visual Studio and push it to your GITHUB repository.
+ Modify the code and commit the updates back in GITHUB.
+ Using Jenkins configure the job as pipeline and create the stages for the Continuous
+Integration process.
+ Containerize the application using Dockerfile and display the stages in stage view in
+Jenkins.
+
+e. Prime number.
+
